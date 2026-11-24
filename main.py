@@ -1,214 +1,113 @@
-
-import json
-import csv
-import os
-
-FILE_NAME = "students.json"
+from bank import Bank
 
 
-# Load student records
-def load_students():
+def read_amount(prompt):
     try:
-        if os.path.exists(FILE_NAME):
-            with open(FILE_NAME, "r") as file:
-                return json.load(file)
-        return []
-
-    except (json.JSONDecodeError, OSError) as error:
-        print("Error reading file:", error)
-        return []
-
-
-# Save student records
-def save_students(students):
-    try:
-        with open(FILE_NAME, "w") as file:
-            json.dump(students, file, indent=4)
-        return True
-
-    except OSError as error:
-        print("Error saving file:", error)
-        return False
-
-
-# Add student
-def add_student(students):
-    student_id = input("Enter Student ID: ")
-
-    if any(s["id"] == student_id for s in students):
-        print("Student ID already exists!")
-        return
-
-    name = input("Enter Student Name: ")
-
-    try:
-        age = int(input("Enter Age: "))
-        marks = float(input("Enter Marks: "))
-
-        if age <= 0 or not 0 <= marks <= 100:
-            print("Enter a valid age and marks (0-100).")
-            return
-
+        amount = float(input(prompt))
+        if amount <= 0:
+            print("Please enter an amount greater than zero.")
+            return None
+        return amount
     except ValueError:
-        print("Please enter valid numbers.")
-        return
-
-    course = input("Enter Course: ")
-
-    student = {
-        "id": student_id,
-        "name": name,
-        "age": age,
-        "course": course,
-        "marks": marks
-    }
-
-    students.append(student)
-
-    if save_students(students):
-        print("Student added successfully!")
+        print("Please enter a valid number.")
+        return None
 
 
-# View students
-def view_students(students):
-    if not students:
-        print("No student records found.")
-        return
-
-    print("\n----- STUDENT RECORDS -----")
-
-    for student in students:
-        print(student)
-
-
-# Search student
-def search_student(students):
-    student_id = input("Enter Student ID to search: ")
-
-    result = list(filter(
-        lambda s: s["id"] == student_id,
-        students
-    ))
-
-    if result:
-        print("Student found:", result[0])
-    else:
-        print("Student not found.")
+def show_menu():
+    print("\n========== PYTHON BANKING SYSTEM ==========")
+    print("1. Create account")
+    print("2. Deposit money")
+    print("3. Withdraw money")
+    print("4. Check account details")
+    print("5. View transaction history")
+    print("6. View all accounts")
+    print("7. Exit")
+    print("============================================")
 
 
-# Update student
-def update_student(students):
-    student_id = input("Enter Student ID to update: ")
-
-    student = next(
-        (s for s in students if s["id"] == student_id),
-        None
-    )
-
-    if student is None:
-        print("Student not found.")
-        return
-
-    name = input("Enter new name: ")
-    course = input("Enter new course: ")
-
-    student["name"] = name
-    student["course"] = course
-
-    if save_students(students):
-        print("Student updated successfully!")
-
-
-# Delete student
-def delete_student(students):
-    student_id = input("Enter Student ID to delete: ")
-
-    updated_students = [
-        s for s in students if s["id"] != student_id
-    ]
-
-    if len(updated_students) == len(students):
-        print("Student not found.")
-        return
-
-    if save_students(updated_students):
-        students[:] = updated_students
-        print("Student deleted successfully!")
-
-
-# Export records to CSV
-def export_csv(students):
-    try:
-        with open("students.csv", "w", newline="") as file:
-            fields = ["id", "name", "age", "course", "marks"]
-
-            writer = csv.DictWriter(file, fieldnames=fields)
-            writer.writeheader()
-            writer.writerows(students)
-
-        print("CSV file exported successfully!")
-
-    except OSError as error:
-        print("CSV export error:", error)
-
-
-# Main menu
 def main():
-    students = load_students()
+    bank = Bank()
+
+    print(f"Welcome to {bank.name}!")
 
     while True:
-        print("\n===== STUDENT RECORD MANAGEMENT =====")
-        print("1. Add Student")
-        print("2. View Students")
-        print("3. Search Student")
-        print("4. Update Student")
-        print("5. Delete Student")
-        print("6. Export to CSV")
-        print("7. Show Students with Marks >= 50")
-        print("8. Exit")
+        show_menu()
+        choice = input("Enter your choice (1-7): ").strip()
 
         try:
-            choice = int(input("Enter your choice: "))
+            if choice == "1":
+                holder = input("Enter account holder name: ").strip()
+                account_type = input(
+                    "Enter account type (Savings/Current): "
+                ).strip()
+                opening_balance = float(input("Enter opening balance: ₹"))
 
-            if choice == 1:
-                add_student(students)
+                overdraft_limit = 5000
+                if account_type.lower() == "current":
+                    overdraft_limit = float(
+                        input("Enter overdraft limit (₹, default 5000): ") or 5000
+                    )
 
-            elif choice == 2:
-                view_students(students)
+                account = bank.create_account(
+                    holder, account_type, opening_balance, overdraft_limit
+                )
+                print("\nAccount created successfully!")
+                print(f"Your account number is: {account.account_number}")
+                account.display_details()
 
-            elif choice == 3:
-                search_student(students)
+            elif choice == "2":
+                number = input("Enter account number: ").strip()
+                amount = read_amount("Enter deposit amount: ₹")
+                if amount is not None:
+                    balance = bank.deposit(number, amount)
+                    print(f"Deposit successful. New balance: ₹{balance:.2f}")
 
-            elif choice == 4:
-                update_student(students)
+            elif choice == "3":
+                number = input("Enter account number: ").strip()
+                amount = read_amount("Enter withdrawal amount: ₹")
+                if amount is not None:
+                    balance = bank.withdraw(number, amount)
+                    print(f"Withdrawal successful. New balance: ₹{balance:.2f}")
 
-            elif choice == 5:
-                delete_student(students)
+            elif choice == "4":
+                number = input("Enter account number: ").strip()
+                bank.get_account(number).display_details()
 
-            elif choice == 6:
-                export_csv(students)
+            elif choice == "5":
+                number = input("Enter account number: ").strip()
+                transactions = bank.show_transactions(number)
+                print("\n------ TRANSACTION HISTORY ------")
+                if not transactions:
+                    print("No transactions found.")
+                else:
+                    for transaction in transactions:
+                        print(transaction)
 
-            elif choice == 7:
-                passed = [
-                    s for s in students if s["marks"] >= 50
-                ]
-                print("Students with marks >= 50:", passed)
+            elif choice == "6":
+                accounts = bank.list_accounts()
+                print("\n------ ALL BANK ACCOUNTS ------")
+                if not accounts:
+                    print("No accounts have been created yet.")
+                else:
+                    for account in accounts:
+                        print(
+                            f"{account.account_number} | "
+                            f"{account.account_holder} | "
+                            f"{account.account_type} | "
+                            f"₹{account.balance:.2f}"
+                        )
 
-            elif choice == 8:
-                print("Thank you for using the application!")
+            elif choice == "7":
+                print("Thank you for using the Python Banking System. Goodbye!")
                 break
 
             else:
-                print("Please enter a choice between 1 and 8.")
+                print("Invalid choice. Please enter a number from 1 to 7.")
 
-        except ValueError:
-            print("Invalid input! Enter a number.")
-
+        except ValueError as error:
+            print(f"Error: {error}")
         except Exception as error:
-            print("Unexpected error:", error)
-
-        finally:
-            print("Operation completed.")
+            print(f"Something went wrong: {error}")
 
 
 if __name__ == "__main__":
